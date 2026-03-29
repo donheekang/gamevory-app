@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { X, Star, Clock, Users, Globe, Play, Trophy, Monitor, ShoppingCart, TrendingUp, ChevronDown, ChevronUp, Target, Sparkles, Bookmark, ExternalLink } from "lucide-react";
+import { X, Star, Clock, Users, Globe, Play, Trophy, Monitor, ShoppingCart, TrendingUp, ChevronDown, ChevronUp, Target, Bookmark, ExternalLink, AlertTriangle, Hash, Gamepad2, Gift, Tag, ArrowDown, CheckCircle, Minus, ThumbsUp, ThumbsDown, Flame, Languages, Info } from "lucide-react";
 import { COLORS } from "../styles/theme";
 import { useRawgGameDetail } from "../hooks/useRawgGameDetail";
 import { generateKoreanDescription, generateRecommendFor, generateHighlights, generateKoreanTags, getPlaytimeComment, getScoreComment } from "../utils/gameDescriptionKo";
@@ -33,28 +33,31 @@ const getRatingLabel = (score) => {
   return "별로";
 };
 
-const STORE_INFO = {
-  1: { name: "Steam", color: "#1B2838", icon: "🎮" },
-  2: { name: "Xbox Store", color: "#107C10", icon: "🟢" },
-  3: { name: "PlayStation Store", color: "#003087", icon: "🔵" },
-  4: { name: "App Store", color: "#0D7AFF", icon: "🍎" },
-  5: { name: "GOG", color: "#86328A", icon: "🟣" },
-  6: { name: "Nintendo Store", color: "#E60012", icon: "🔴" },
-  7: { name: "Xbox 360", color: "#5DC21E", icon: "🟢" },
-  8: { name: "Google Play", color: "#01875F", icon: "📱" },
-  9: { name: "itch.io", color: "#FA5C5C", icon: "🎯" },
-  11: { name: "Epic Games", color: "#2A2A2A", icon: "⚡" },
+const STORE_ICONS = {
+  1: { name: "Steam", color: "#1B2838" },
+  2: { name: "Xbox Store", color: "#107C10" },
+  3: { name: "PlayStation Store", color: "#003087" },
+  4: { name: "App Store", color: "#0D7AFF" },
+  5: { name: "GOG", color: "#86328A" },
+  6: { name: "Nintendo Store", color: "#E60012" },
+  7: { name: "Xbox 360", color: "#5DC21E" },
+  8: { name: "Google Play", color: "#01875F" },
+  9: { name: "itch.io", color: "#FA5C5C" },
+  11: { name: "Epic Games", color: "#2A2A2A" },
 };
 
-const RECOMMEND_EMOJIS = ["🎯", "🔥", "💡", "🌟"];
-
-// 섹션 헤더 컴포넌트
+// 섹션 헤더 컴포넌트 — 깔끔한 타이포그래피 중심
 const SectionHeader = ({ icon, title, sub, color }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-    <div style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: color || COLORS.primary }} />
-    {icon}
-    <span style={{ fontSize: 15, fontWeight: 800, color: COLORS.textPrimary }}>{title}</span>
-    {sub && <span style={{ fontSize: 11, fontWeight: 500, color: COLORS.textMuted }}>{sub}</span>}
+  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+    <div style={{
+      width: 28, height: 28, borderRadius: 8,
+      backgroundColor: (color || COLORS.primary) + "10",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {icon}
+    </div>
+    <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>{title}</span>
+    {sub && <span style={{ fontSize: 11, fontWeight: 500, color: COLORS.textMuted, marginLeft: 2 }}>{sub}</span>}
   </div>
 );
 
@@ -71,10 +74,9 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
     if (!text || translating) return;
     setTranslating(true);
     try {
-      // 텍스트를 500자 청크로 분할 (API 제한)
       const chunks = [];
       const maxLen = 480;
-      let remaining = text.slice(0, 1500); // 최대 1500자까지
+      let remaining = text.slice(0, 1500);
       while (remaining.length > 0) {
         if (remaining.length <= maxLen) {
           chunks.push(remaining);
@@ -135,12 +137,12 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
   const redditUrl = details?.reddit_url;
   const redditCount = details?.reddit_count || 0;
 
-  // 한국어 지원 정보: Steam API > DB > 기존 game.kr 순으로 신뢰
+  // 한국어 지원 정보
   const slug = details?.slug || game?.slug;
   const krFromSteam = steamKo?.koreanSupport;
   const krFromDb = getKoreanSupport({
     slug,
-    steamAppId: game.steamAppId || (game.id && !game.isRawg ? game.id : null),
+    steamAppId: game.steamAppId || (!game.isRawg ? game.id : null),
     tags: details?.tags || [],
   });
   const krSupport = krFromSteam || krFromDb || game.kr || { ui: false, sub: false, audio: false };
@@ -148,7 +150,6 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
   // 한국어 데이터 생성
   const highlights = details ? generateHighlights(details) : [];
   const koTags = details ? generateKoreanTags(details) : (game.tags || []);
-  // Steam 한국어 설명 — 상세 설명 우선, 없으면 짧은 설명
   const steamDescDetailed = steamKo?.detailedDescKo ? stripHtml(steamKo.detailedDescKo) : null;
   const steamDescShort = steamKo?.descriptionKo ? stripHtml(steamKo.descriptionKo) : null;
   const steamDesc = steamDescDetailed || steamDescShort;
@@ -159,7 +160,7 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
   const curatedDesc = getGameDescriptionKo(slug);
   const hasCurated = !!curatedDesc;
 
-  // 최종 설명: 큐레이션 DB > Steam 한국어(상세) > 자동 생성 한국어 > 영어
+  // 최종 설명
   const description = hasCurated ? curatedDesc.summary : (steamDesc || autoKoDesc || enDesc);
   const descLabel = hasCurated ? "에디터 한국어" : steamDesc ? "Steam 공식 한국어" : autoKoDesc ? "한국어 요약" : enDesc ? "영문 원본" : null;
   const descColor = hasCurated ? "#FF6F61" : steamDesc ? "#00C073" : autoKoDesc ? COLORS.primary : "#999";
@@ -171,16 +172,16 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
   // 평점 분포
   const ratingMap = {
-    exceptional: { label: "명작", emoji: "🏆", color: "#00C073" },
-    recommended: { label: "추천", emoji: "👍", color: "#7DC800" },
-    meh: { label: "보통", emoji: "😐", color: "#FFB800" },
-    skip: { label: "비추", emoji: "👎", color: "#FF6B6B" },
+    exceptional: { label: "명작", color: "#00C073", Icon: Trophy },
+    recommended: { label: "추천", color: "#7DC800", Icon: ThumbsUp },
+    meh: { label: "보통", color: "#FFB800", Icon: Minus },
+    skip: { label: "비추", color: "#FF6B6B", Icon: ThumbsDown },
   };
   const totalRatings = ratings.reduce((sum, r) => sum + r.count, 0);
 
   return (
     <div style={{
-      position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px",
+      position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "16px",
       backdropFilter: "blur(4px)",
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
@@ -218,14 +219,14 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             <div onClick={() => setShowTrailer(true)}
               style={{
                 position: "absolute", bottom: 70, left: 24, display: "flex", alignItems: "center", gap: 8,
-                padding: "10px 18px", borderRadius: 12, backgroundColor: "rgba(255,111,97,0.9)",
-                color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
-                backdropFilter: "blur(8px)", boxShadow: "0 4px 12px rgba(255,111,97,0.4)",
+                padding: "10px 18px", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)",
+                color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)",
               }}
-              onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
-              onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}>
-              <Play size={16} fill="#fff" />
-              트레일러 보기
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.25)"}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.15)"}>
+              <Play size={15} fill="#fff" />
+              트레일러 재생
             </div>
           )}
           {showTrailer && (
@@ -239,9 +240,9 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* 히어로 위 제목 오버레이 */}
           <div style={{ position: "absolute", bottom: 16, left: 24, right: 80 }}>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 500, marginBottom: 4 }}>{genreKo}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 500, marginBottom: 4 }}>{genreKo}</div>
             <h2 style={{ fontSize: 26, fontWeight: 900, color: "#fff", margin: 0, lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{titleKo}</h2>
-            {titleKo !== game.title && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", marginTop: 4 }}>{game.title}</div>}
+            {titleKo !== game.title && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4 }}>{game.title}</div>}
           </div>
 
           {/* 메타크리틱 뱃지 */}
@@ -278,8 +279,11 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* ====== 개발사 ====== */}
           {developers.length > 0 && (
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 10 }}>
               <span style={{ fontSize: 12, color: COLORS.textMuted }}>{developers.join(" · ")}</span>
+              {publishers.length > 0 && publishers[0] !== developers[0] && (
+                <span style={{ fontSize: 12, color: COLORS.textMuted }}> · {publishers[0]}</span>
+              )}
             </div>
           )}
 
@@ -288,179 +292,158 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             const steamId = hookSteamId || game.steamAppId || (!game.isRawg ? game.id : null);
             const pSlug = details?.slug || game?.slug;
 
-            // 정적 DB 우선 (즉시 표시) → Steam API 폴백 (DB에 없는 게임만)
             const staticPrice = getGamePrice(pSlug, steamId);
             const steamPriceDetail = steamKo?.priceDetail;
             const priceData = staticPrice
-              ? staticPrice  // 정적 DB에 있으면 즉시 사용 (API 대기 불필요)
+              ? staticPrice
               : steamPriceDetail
                 ? { full: steamPriceDetail.full, low: Math.round(steamPriceDetail.full * 0.7), curr: steamPriceDetail.curr, disc: steamPriceDetail.disc }
-                : null;  // 둘 다 없으면 Steam 링크 카드 표시
+                : null;
 
             const isFree = priceData?.free || steamKo?.isFree || game.free || priceDisplay === "무료";
             const steamUrl = steamId ? `https://store.steampowered.com/app/${steamId}` : null;
-            const itadUrl = steamId ? `https://isthereanydeal.com/steam/app/${steamId}/` : null;
-            const steamDbUrl = steamId ? `https://steamdb.info/app/${steamId}/` : null;
 
             // 무료 게임
             if (isFree) return (
-              <div style={{ marginBottom: 16, padding: "16px", borderRadius: 16, background: "linear-gradient(135deg, #F0FFF8, #E8FAF0)", border: "1px solid #00C07320" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 20 }}>🎉</span>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: "#00C073" }}>무료 게임</span>
+              <div style={{
+                marginBottom: 16, padding: "16px 18px", borderRadius: 14,
+                backgroundColor: "#F6FDF9", border: "1px solid #D4EDDA",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Gift size={20} color="#00C073" />
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "#00A363" }}>무료 플레이</span>
+                  </div>
+                  {steamUrl && (
+                    <a href={steamUrl} target="_blank" rel="noreferrer" style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "8px 16px", borderRadius: 8, textDecoration: "none",
+                      backgroundColor: "#1B2838", color: "#fff", fontSize: 12, fontWeight: 600,
+                    }}>
+                      <Gamepad2 size={14} /> Steam
+                      <ExternalLink size={12} style={{ opacity: 0.6 }} />
+                    </a>
+                  )}
                 </div>
-                {steamUrl && (
-                  <a href={steamUrl} target="_blank" rel="noreferrer" style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "10px 14px", borderRadius: 10, textDecoration: "none",
-                    backgroundColor: "#1B2838", color: "#fff", fontSize: 13, fontWeight: 700,
-                  }}>🎮 Steam에서 바로 받기</a>
-                )}
               </div>
             );
 
-            // 가격 데이터 있을 때 — 프리미엄 가격 차트
+            // 가격 데이터 있을 때
             if (priceData) {
               const { full, low, curr, disc } = priceData;
               const saving = full - curr;
               const isOnSale = disc > 0;
               const savePct = full > 0 ? Math.round(((full - curr) / full) * 100) : 0;
               const isSamePrice = curr === full;
-              // 가격 위치 계산 (게이지 바 퍼센트)
               const range = full - low || 1;
               const currPctInRange = Math.max(0, Math.min(100, ((curr - low) / range) * 100));
 
               return (
-                <div style={{ marginBottom: 16, borderRadius: 20, overflow: "hidden", background: "#fff", boxShadow: "0 2px 20px rgba(0,0,0,0.06)" }}>
+                <div style={{
+                  marginBottom: 16, borderRadius: 16, overflow: "hidden",
+                  border: "1px solid #E8ECF0", backgroundColor: "#fff",
+                }}>
 
-                  {/* 상단 히어로: 현재가 */}
+                  {/* 상단: 현재가 */}
                   <div style={{
-                    padding: "22px 22px 18px",
-                    background: isOnSale
-                      ? "linear-gradient(135deg, #FF6B6B 0%, #EE5A24 100%)"
-                      : "linear-gradient(135deg, #0F0C29 0%, #302B63 50%, #24243E 100%)",
-                    position: "relative", overflow: "hidden",
+                    padding: "20px 22px 18px",
+                    backgroundColor: isOnSale ? "#1B2838" : "#1B2838",
                   }}>
-                    {/* 배경 장식 원 */}
-                    <div style={{ position: "absolute", top: -30, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-                    <div style={{ position: "absolute", bottom: -40, left: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
-
-                    <div style={{ position: "relative", zIndex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.7)", letterSpacing: 0.5, textTransform: "uppercase" }}>
-                            {isOnSale ? "Sale" : "Steam Price"}
-                          </span>
-                        </div>
-                        {isOnSale && (
-                          <span style={{
-                            background: "rgba(255,255,255,0.2)", backdropFilter: "blur(10px)",
-                            color: "#fff", padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 800,
-                            border: "1px solid rgba(255,255,255,0.3)",
-                          }}>-{disc}%</span>
-                        )}
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                        <span style={{ fontSize: 36, fontWeight: 900, color: "#fff", letterSpacing: -1.5 }}>{formatKrw(curr)}</span>
-                        {isOnSale && (
-                          <span style={{ fontSize: 16, color: "rgba(255,255,255,0.5)", textDecoration: "line-through", fontWeight: 600 }}>{formatKrw(full)}</span>
-                        )}
-                      </div>
-
-                      {isOnSale && saving > 0 && (
-                        <div style={{
-                          marginTop: 8, display: "inline-flex", alignItems: "center", gap: 4,
-                          background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "4px 10px",
-                        }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.9)" }}>
-                            {formatKrw(saving)} 절약
-                          </span>
-                        </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", letterSpacing: 0.5, textTransform: "uppercase" }}>
+                        {isOnSale ? "할인가" : "현재 가격"}
+                      </span>
+                      {isOnSale && (
+                        <span style={{
+                          background: "#4C6B22", color: "#A4D007",
+                          padding: "3px 10px", borderRadius: 4, fontSize: 13, fontWeight: 800,
+                        }}>-{disc}%</span>
                       )}
                     </div>
+
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                      <span style={{ fontSize: 32, fontWeight: 800, color: "#fff", letterSpacing: -1 }}>{formatKrw(curr)}</span>
+                      {isOnSale && (
+                        <span style={{ fontSize: 15, color: "rgba(255,255,255,0.4)", textDecoration: "line-through" }}>{formatKrw(full)}</span>
+                      )}
+                    </div>
+
+                    {isOnSale && saving > 0 && (
+                      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 500, color: "#A4D007" }}>
+                        {formatKrw(saving)} 절약
+                      </div>
+                    )}
                   </div>
 
-                  {/* 가격 레인지 게이지 */}
-                  <div style={{ padding: "20px 22px 10px" }}>
+                  {/* 가격 비교 */}
+                  <div style={{ padding: "18px 22px" }}>
 
-                    {/* 3단 가격 카드 */}
+                    {/* 3단 가격 */}
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 18 }}>
-                      {/* 역대 최저 */}
                       <div style={{
-                        padding: "12px 10px", borderRadius: 12, textAlign: "center",
-                        background: "linear-gradient(180deg, #F0FFF8 0%, #E8FFF3 100%)",
-                        border: "1px solid #00C07320",
+                        padding: "12px 10px", borderRadius: 10, textAlign: "center",
+                        backgroundColor: "#F7FAF7", border: "1px solid #E2EDE2",
                       }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: "#00C073", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4, opacity: 0.8 }}>최저가</div>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: "#00A363" }}>{formatKrw(low)}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#6B8F6B", letterSpacing: 0.3, marginBottom: 4 }}>역대 최저</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#3D7A3D" }}>{formatKrw(low)}</div>
                       </div>
-                      {/* 현재가 */}
                       <div style={{
-                        padding: "12px 10px", borderRadius: 12, textAlign: "center",
-                        background: isOnSale
-                          ? "linear-gradient(180deg, #FFF5F5 0%, #FFE8E8 100%)"
-                          : "linear-gradient(180deg, #F0F4FF 0%, #E8EEFF 100%)",
-                        border: `1px solid ${isOnSale ? "#FF6B6B25" : "#4361EE20"}`,
-                        transform: "scale(1.04)", boxShadow: `0 4px 15px ${isOnSale ? "rgba(255,107,107,0.15)" : "rgba(67,97,238,0.12)"}`,
+                        padding: "12px 10px", borderRadius: 10, textAlign: "center",
+                        backgroundColor: isOnSale ? "#FFF8F5" : "#F5F8FC",
+                        border: `1px solid ${isOnSale ? "#F0D8CF" : "#D8E3F0"}`,
                       }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: isOnSale ? "#FF6B6B" : "#4361EE", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4, opacity: 0.8 }}>현재가</div>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: isOnSale ? "#E55656" : "#3450D0" }}>{formatKrw(curr)}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: isOnSale ? "#C06040" : "#5A7BA5", letterSpacing: 0.3, marginBottom: 4 }}>현재가</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: isOnSale ? "#B04A2F" : "#3A5D8C" }}>{formatKrw(curr)}</div>
                       </div>
-                      {/* 정가 */}
                       <div style={{
-                        padding: "12px 10px", borderRadius: 12, textAlign: "center",
-                        background: "linear-gradient(180deg, #F8F9FA 0%, #F0F1F3 100%)",
-                        border: "1px solid #E0E3E8",
+                        padding: "12px 10px", borderRadius: 10, textAlign: "center",
+                        backgroundColor: "#F8F8F9", border: "1px solid #E4E5E8",
                       }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 4, opacity: 0.8 }}>정가</div>
-                        <div style={{ fontSize: 15, fontWeight: 900, color: "#666" }}>{formatKrw(full)}</div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#888", letterSpacing: 0.3, marginBottom: 4 }}>정가</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#666" }}>{formatKrw(full)}</div>
                       </div>
                     </div>
 
                     {/* 게이지 바 */}
-                    <div style={{ marginBottom: 6 }}>
+                    <div style={{ marginBottom: 4 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#999", letterSpacing: 0.3 }}>가격 위치</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#999" }}>가격 위치</span>
                         <span style={{
-                          fontSize: 11, fontWeight: 800,
-                          color: isSamePrice ? "#888" : isOnSale ? "#FF6B6B" : currPctInRange < 30 ? "#00C073" : "#4361EE",
+                          fontSize: 11, fontWeight: 700,
+                          color: isSamePrice ? "#888" : isOnSale ? "#B04A2F" : currPctInRange < 30 ? "#3D7A3D" : "#5A7BA5",
                         }}>
                           {isSamePrice ? "정가 유지 중" : isOnSale ? `정가 대비 ${savePct}% 할인` : currPctInRange < 30 ? "최저가 근접" : "중간 가격대"}
                         </span>
                       </div>
                       {/* 게이지 트랙 */}
                       <div style={{
-                        position: "relative", height: 8, borderRadius: 10,
-                        background: "linear-gradient(90deg, #00C073 0%, #FFD43B 50%, #FF6B6B 100%)",
-                        opacity: 0.2,
-                      }} />
-                      {/* 게이지 채움 */}
-                      <div style={{
-                        position: "relative", height: 8, borderRadius: 10, marginTop: -8,
-                        background: isSamePrice
-                          ? "linear-gradient(90deg, #00C073, #FFD43B, #999)"
-                          : `linear-gradient(90deg, #00C073, ${currPctInRange > 60 ? "#FF6B6B" : "#FFD43B"})`,
-                        width: `${isSamePrice ? 100 : Math.max(currPctInRange, 6)}%`,
-                        transition: "width 0.6s ease",
-                        boxShadow: isSamePrice ? "none" : `2px 0 10px ${currPctInRange > 60 ? "rgba(255,107,107,0.3)" : "rgba(0,192,115,0.3)"}`,
-                      }} />
-                      {/* 현재가 마커 */}
-                      {!isSamePrice && (
+                        position: "relative", height: 6, borderRadius: 10,
+                        background: "#ECEEF0",
+                      }}>
+                        {/* 게이지 채움 */}
                         <div style={{
-                          position: "absolute", left: `${Math.max(currPctInRange, 3)}%`,
-                          top: -3, marginTop: 0, marginLeft: -7,
-                          width: 14, height: 14, borderRadius: "50%",
-                          background: isOnSale ? "#FF6B6B" : currPctInRange < 30 ? "#00C073" : "#4361EE",
-                          border: "3px solid #fff",
-                          boxShadow: `0 2px 8px rgba(0,0,0,0.2)`,
-                          transform: "translateY(-3px)",
+                          position: "absolute", top: 0, left: 0, height: 6, borderRadius: 10,
+                          background: isSamePrice
+                            ? "#C8CCD0"
+                            : currPctInRange < 30 ? "#4CAF50" : currPctInRange < 60 ? "#FFB800" : "#E05A3A",
+                          width: `${isSamePrice ? 100 : Math.max(currPctInRange, 6)}%`,
+                          transition: "width 0.6s ease",
                         }} />
-                      )}
-                      {/* 최저 ~ 정가 레이블 */}
+                        {/* 현재가 마커 */}
+                        {!isSamePrice && (
+                          <div style={{
+                            position: "absolute", left: `${Math.max(currPctInRange, 3)}%`,
+                            top: -4, marginLeft: -7,
+                            width: 14, height: 14, borderRadius: "50%",
+                            background: currPctInRange < 30 ? "#4CAF50" : currPctInRange < 60 ? "#FFB800" : "#E05A3A",
+                            border: "3px solid #fff",
+                            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
+                          }} />
+                        )}
+                      </div>
                       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: "#aaa" }}>최저 {formatKrw(low)}</span>
-                        <span style={{ fontSize: 10, fontWeight: 600, color: "#aaa" }}>정가 {formatKrw(full)}</span>
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#aaa" }}>최저 {formatKrw(low)}</span>
+                        <span style={{ fontSize: 10, fontWeight: 500, color: "#aaa" }}>정가 {formatKrw(full)}</span>
                       </div>
                     </div>
                   </div>
@@ -468,32 +451,32 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
                   {/* 하단 코멘트 */}
                   <div style={{ padding: "0 22px 18px" }}>
                     <div style={{
-                      padding: "12px 16px", borderRadius: 14,
-                      background: isOnSale
-                        ? "linear-gradient(135deg, #FFF5F5, #FFEDED)"
-                        : curr <= low * 1.2 ? "linear-gradient(135deg, #F0FFF8, #E8FFF3)" : "linear-gradient(135deg, #F8F9FB, #F2F3F5)",
-                      border: `1px solid ${isOnSale ? "#FF6B6B12" : curr <= low * 1.2 ? "#00C07312" : "#E8ECF0"}`,
+                      padding: "12px 14px", borderRadius: 10,
+                      backgroundColor: "#F6F7F9", border: "1px solid #ECEEF0",
+                      display: "flex", alignItems: "center", gap: 10,
                     }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>
-                          {isOnSale ? (curr <= low ? "🔥" : "💰") : (curr <= low * 1.2 ? "✅" : "⏳")}
-                        </span>
-                        <div>
-                          <div style={{
-                            fontSize: 13, fontWeight: 800,
-                            color: isOnSale ? "#E55656" : curr <= low * 1.2 ? "#00A363" : "#666",
-                          }}>
-                            {isOnSale
-                              ? curr <= low ? "역대 최저가! 지금이 최적의 타이밍" : "할인 중! 역대 최저가에 근접"
-                              : curr <= low * 1.2 ? "괜찮은 가격대에요" : "할인을 기다려보세요"
-                            }
-                          </div>
-                          <div style={{ fontSize: 11, fontWeight: 500, color: "#999", marginTop: 2 }}>
-                            {isOnSale
-                              ? `최저가 대비 ${formatKrw(curr - low)} 차이`
-                              : `역대 최저가보다 ${formatKrw(curr - low)} 높아요`
-                            }
-                          </div>
+                      {isOnSale ? (
+                        <ArrowDown size={16} color="#B04A2F" />
+                      ) : curr <= low * 1.2 ? (
+                        <CheckCircle size={16} color="#3D7A3D" />
+                      ) : (
+                        <Info size={16} color="#888" />
+                      )}
+                      <div>
+                        <div style={{
+                          fontSize: 13, fontWeight: 700,
+                          color: isOnSale ? "#B04A2F" : curr <= low * 1.2 ? "#3D7A3D" : "#555",
+                        }}>
+                          {isOnSale
+                            ? curr <= low ? "역대 최저가 달성 중" : "할인 진행 중"
+                            : curr <= low * 1.2 ? "괜찮은 가격대" : "할인을 기다려보세요"
+                          }
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 500, color: "#999", marginTop: 2 }}>
+                          {isOnSale
+                            ? `최저가 대비 ${formatKrw(curr - low)} 차이`
+                            : `역대 최저가보다 ${formatKrw(curr - low)} 높아요`
+                          }
                         </div>
                       </div>
                     </div>
@@ -502,20 +485,20 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
               );
             }
 
-            // 가격 데이터 없을 때 — Steam 스토어 링크 카드
+            // 가격 데이터 없을 때
             const searchUrl = `https://store.steampowered.com/search/?term=${encodeURIComponent(game.title || "")}`;
             return (
-              <div style={{ marginBottom: 16, borderRadius: 16, overflow: "hidden", border: "1px solid #E8ECF0" }}>
+              <div style={{ marginBottom: 16, borderRadius: 14, overflow: "hidden", border: "1px solid #E8ECF0" }}>
                 <a href={steamUrl || searchUrl} target="_blank" rel="noreferrer" style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "16px 18px", textDecoration: "none",
-                  background: "linear-gradient(135deg, #1B2838, #2A475E)", color: "#fff",
+                  backgroundColor: "#1B2838", color: "#fff",
                 }}>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.7, marginBottom: 4 }}>Steam 스토어</div>
-                    <div style={{ fontSize: 18, fontWeight: 900 }}>가격 확인하기</div>
+                    <div style={{ fontSize: 11, fontWeight: 500, opacity: 0.6, marginBottom: 4 }}>Steam Store</div>
+                    <div style={{ fontSize: 16, fontWeight: 700 }}>가격 확인하기</div>
                   </div>
-                  <ExternalLink size={20} style={{ opacity: 0.6 }} />
+                  <ExternalLink size={18} style={{ opacity: 0.5 }} />
                 </a>
               </div>
             );
@@ -524,14 +507,19 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
           {/* 한줄 평가 배너 */}
           {scoreComment && (
             <div style={{
-              padding: "12px 16px", borderRadius: 14, marginBottom: 16,
-              background: `linear-gradient(135deg, ${getRatingColor(metacritic)}12, ${getRatingColor(metacritic)}06)`,
-              border: `1px solid ${getRatingColor(metacritic)}25`,
+              padding: "12px 16px", borderRadius: 12, marginBottom: 16,
+              backgroundColor: "#F8F9FA", border: `1px solid #ECEEF0`,
               display: "flex", alignItems: "center", gap: 10,
             }}>
-              <Sparkles size={18} color={getRatingColor(metacritic)} />
+              <div style={{
+                width: 32, height: 32, borderRadius: 8,
+                backgroundColor: getRatingColor(metacritic) + "15",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Star size={16} color={getRatingColor(metacritic)} />
+              </div>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: getRatingColor(metacritic) }}>{scoreComment}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary }}>{scoreComment}</div>
                 <div style={{ fontSize: 11, color: COLORS.textMuted, marginTop: 2 }}>메타크리틱 {metacritic}점 · {ratingsCount.toLocaleString()}명 평가</div>
               </div>
             </div>
@@ -539,16 +527,15 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* ====== 핵심 특징 배지 ====== */}
           {highlights.length > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
               {highlights.map((h, i) => (
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: 5,
-                  padding: "6px 12px", borderRadius: 10,
-                  backgroundColor: i === 0 ? `${COLORS.primary}12` : COLORS.bgGray,
-                  border: i === 0 ? `1px solid ${COLORS.primary}30` : `1px solid ${COLORS.borderLight}`,
+                  padding: "5px 12px", borderRadius: 8,
+                  backgroundColor: COLORS.bgGray,
+                  border: `1px solid ${COLORS.borderLight}`,
                 }}>
-                  <span style={{ fontSize: 14 }}>{h.emoji}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: i === 0 ? COLORS.primary : COLORS.textSecondary }}>{h.text}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textSecondary }}>{h.text}</span>
                 </div>
               ))}
             </div>
@@ -560,19 +547,19 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             marginBottom: 16,
           }}>
             {[
-              { icon: <Star size={18} color="#FFB800" fill="#FFB800" />, label: "평점", value: metacritic ? `${metacritic}점` : (game.rating ? `${game.rating}/5` : "-"), sub: metacritic ? getRatingLabel(metacritic) : "", bg: "#FFFBF0" },
-              { icon: <Clock size={18} color="#6C5CE7" />, label: "플레이타임", value: playtime ? `${playtime}시간` : game.playtime || "-", sub: playtime > 40 ? "시간 녹는 갓겜" : playtime > 15 ? "적당한 볼륨" : playtime > 0 ? "가볍게 즐기기" : "", bg: "#F5F0FF" },
-              { icon: <Globe size={18} color={krSupport.ui ? "#00C073" : "#FF9F1C"} />, label: "한국어", value: krSupport.ui ? "지원" : "미지원", sub: krSupport.audio ? "음성 포함" : krSupport.sub ? "자막 포함" : "", bg: krSupport.ui ? "#F0FFF8" : "#FFF8F0" },
-              { icon: <Users size={18} color={COLORS.primary} />, label: "인기도", value: addedCount > 1000 ? `${(addedCount / 1000).toFixed(0)}K명` : addedCount > 0 ? `${addedCount}명` : ratingsCount > 0 ? `${ratingsCount}명` : "-", sub: "관심 등록", bg: "#F0F8FF" },
+              { icon: <Star size={16} color="#FFB800" fill="#FFB800" />, label: "평점", value: metacritic ? `${metacritic}점` : (game.rating ? `${game.rating}/5` : "-"), sub: metacritic ? getRatingLabel(metacritic) : "" },
+              { icon: <Clock size={16} color="#6C5CE7" />, label: "플레이타임", value: playtime ? `${playtime}시간` : game.playtime || "-", sub: playtime > 40 ? "대작급 볼륨" : playtime > 15 ? "적당한 볼륨" : playtime > 0 ? "가볍게 즐기기" : "" },
+              { icon: <Languages size={16} color={krSupport.ui ? "#00C073" : "#FF9F1C"} />, label: "한국어", value: krSupport.ui ? "지원" : "미지원", sub: krSupport.audio ? "음성 포함" : krSupport.sub ? "자막 포함" : "" },
+              { icon: <Users size={16} color="#5A7BA5" />, label: "인기도", value: addedCount > 1000 ? `${(addedCount / 1000).toFixed(0)}K명` : addedCount > 0 ? `${addedCount}명` : ratingsCount > 0 ? `${ratingsCount}명` : "-", sub: "관심 등록" },
             ].map((info, i) => (
               <div key={i} style={{
-                textAlign: "center", padding: "14px 6px", borderRadius: 14,
-                backgroundColor: info.bg, border: `1px solid ${COLORS.borderLight}`,
+                textAlign: "center", padding: "14px 6px", borderRadius: 12,
+                backgroundColor: "#F8F9FA", border: `1px solid #ECEEF0`,
               }}>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>{info.icon}</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: COLORS.textPrimary, marginBottom: 2 }}>{info.value}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: COLORS.textPrimary, marginBottom: 2 }}>{info.value}</div>
                 <div style={{ fontSize: 10, color: COLORS.textMuted, fontWeight: 500 }}>{info.label}</div>
-                {info.sub && <div style={{ fontSize: 9, color: COLORS.primary, fontWeight: 600, marginTop: 2 }}>{info.sub}</div>}
+                {info.sub && <div style={{ fontSize: 9, color: COLORS.textSecondary, fontWeight: 600, marginTop: 2 }}>{info.sub}</div>}
               </div>
             ))}
           </div>
@@ -580,20 +567,25 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
           {/* ====== 이런 분에게 추천해요 ====== */}
           {recommendFor.length > 0 && (
             <div style={{
-              marginBottom: 16, padding: "18px", borderRadius: 16,
-              background: "linear-gradient(135deg, #F0F8FF, #F5F0FF)",
-              border: `1px solid ${COLORS.primaryLight}`,
+              marginBottom: 16, padding: "18px", borderRadius: 14,
+              backgroundColor: "#F8F9FA", border: `1px solid #ECEEF0`,
             }}>
-              <SectionHeader icon={<Target size={16} color={COLORS.primary} />} title="이런 분에게 추천해요" color={COLORS.primary} />
+              <SectionHeader icon={<Target size={15} color={COLORS.primary} />} title="이런 분에게 추천해요" color={COLORS.primary} />
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(recommendFor.length, 2)}, 1fr)`, gap: 8 }}>
                 {recommendFor.map((rec, i) => (
                   <div key={i} style={{
                     display: "flex", alignItems: "center", gap: 10,
-                    padding: "11px 14px", borderRadius: 12,
-                    backgroundColor: "#fff", border: `1px solid ${COLORS.borderLight}`,
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                    padding: "10px 14px", borderRadius: 10,
+                    backgroundColor: "#fff", border: `1px solid #ECEEF0`,
                   }}>
-                    <span style={{ fontSize: 20 }}>{RECOMMEND_EMOJIS[i] || "✨"}</span>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: 6,
+                      backgroundColor: COLORS.primary + "12",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      <CheckCircle size={13} color={COLORS.primary} />
+                    </div>
                     <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, lineHeight: 1.3 }}>{rec}</span>
                   </div>
                 ))}
@@ -604,12 +596,21 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
           {/* ====== 게임 소개 ====== */}
           {(description || enDesc) && (
             <div style={{ marginBottom: 16 }}>
-              {/* 한국어 소개 (큐레이션 DB / Steam / 자동생성) */}
               {description && (
-                <div style={{ padding: "18px", backgroundColor: hasCurated ? "#FFF9F8" : COLORS.bgGray, borderRadius: enDesc && !hasCurated && description !== enDesc ? "16px 16px 0 0" : 16, border: hasCurated ? "1px solid #FFE8E4" : "none" }}>
+                <div style={{
+                  padding: "18px",
+                  backgroundColor: "#F8F9FA",
+                  borderRadius: enDesc && !hasCurated && description !== enDesc ? "14px 14px 0 0" : 14,
+                  border: "1px solid #ECEEF0",
+                  borderBottom: enDesc && !hasCurated && description !== enDesc ? "none" : undefined,
+                }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: COLORS.textPrimary }}>게임 소개</div>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: descColor, backgroundColor: `${descColor}15`, padding: "2px 8px", borderRadius: 4 }}>{descLabel}</span>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary }}>게임 소개</div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, color: descColor,
+                      backgroundColor: `${descColor}10`, padding: "2px 8px", borderRadius: 4,
+                      border: `1px solid ${descColor}20`,
+                    }}>{descLabel}</span>
                   </div>
                   <p style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
                     {description}
@@ -621,8 +622,9 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
               {enDesc && description !== enDesc && !steamDesc && (
                 <div style={{
                   padding: "14px 18px", backgroundColor: "#F8F9FA",
-                  borderRadius: description ? "0 0 16px 16px" : 16,
-                  borderTop: description ? `1px dashed ${COLORS.borderLight}` : "none",
+                  borderRadius: description ? "0 0 14px 14px" : 14,
+                  borderTop: description ? `1px dashed #E0E2E6` : "none",
+                  border: description ? undefined : "1px solid #ECEEF0",
                 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -635,17 +637,16 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
                       {!translatedDesc && (
                         <button onClick={() => translateDesc(enDesc)} disabled={translating}
                           style={{
-                            background: translating ? COLORS.bgGray : "linear-gradient(135deg, #35C5F0, #00C073)",
+                            background: translating ? "#F0F1F3" : COLORS.primary,
                             border: "none", color: translating ? COLORS.textMuted : "#fff",
-                            fontSize: 11, fontWeight: 700, cursor: translating ? "default" : "pointer",
-                            padding: "4px 12px", borderRadius: 8,
+                            fontSize: 11, fontWeight: 600, cursor: translating ? "default" : "pointer",
+                            padding: "4px 12px", borderRadius: 6,
                             display: "flex", alignItems: "center", gap: 4,
-                            boxShadow: translating ? "none" : "0 2px 6px rgba(53,197,240,0.3)",
                           }}>
                           {translating ? (
-                            <><span className="spin" style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #ccc", borderTop: "2px solid #999", borderRadius: "50%" }} /> 번역 중...</>
+                            <><span style={{ display: "inline-block", width: 10, height: 10, border: "2px solid #ccc", borderTop: "2px solid #999", borderRadius: "50%", animation: "spin 1s linear infinite" }} /> 번역 중...</>
                           ) : (
-                            <>🌐 한국어로 번역</>
+                            <><Languages size={12} /> 한국어로 번역</>
                           )}
                         </button>
                       )}
@@ -665,7 +666,6 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
                     </div>
                   </div>
 
-                  {/* 번역된 텍스트 or 영어 원문 */}
                   {translatedDesc ? (
                     <p style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
                       {expandDesc ? translatedDesc : translatedDesc.slice(0, 400)}
@@ -692,15 +692,10 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
           {/* ====== 뭐가 재밌나요? (큐레이션 DB 게임) ====== */}
           {hasCurated && curatedDesc.whyPlay && (
             <div style={{
-              marginBottom: 16, padding: "18px", borderRadius: 16,
-              background: "linear-gradient(135deg, #F8FCFE, #FFF8F5)",
-              border: `1px solid ${COLORS.primaryLight}`,
+              marginBottom: 16, padding: "18px", borderRadius: 14,
+              backgroundColor: "#FFFBFA", border: "1px solid #F0E0DC",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <div style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: "#FF6F61" }} />
-                <span style={{ fontSize: 16 }}>🎮</span>
-                <div style={{ fontSize: 15, fontWeight: 800, color: COLORS.textPrimary }}>이 게임, 뭐가 재밌나요?</div>
-              </div>
+              <SectionHeader icon={<Gamepad2 size={15} color="#C06040" />} title="이 게임, 뭐가 재밌나요?" color="#C06040" />
               <p style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.85, margin: 0 }}>
                 {curatedDesc.whyPlay}
               </p>
@@ -708,11 +703,11 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
                   {curatedDesc.keywords.map((kw, i) => (
                     <span key={i} style={{
-                      fontSize: 11, padding: "4px 10px", borderRadius: 8,
-                      backgroundColor: i === 0 ? "#FF6F6118" : "#F5F5F5",
-                      color: i === 0 ? "#FF6F61" : COLORS.textSecondary,
+                      fontSize: 11, padding: "4px 10px", borderRadius: 6,
+                      backgroundColor: i === 0 ? "#C0604012" : "#F5F5F5",
+                      color: i === 0 ? "#C06040" : COLORS.textSecondary,
                       fontWeight: 600,
-                      border: i === 0 ? "1px solid #FF6F6130" : "none",
+                      border: i === 0 ? "1px solid #C0604025" : "1px solid #ECEEF0",
                     }}>#{kw}</span>
                   ))}
                 </div>
@@ -722,34 +717,36 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* ====== 유저 평점 분포 ====== */}
           {ratings.length > 0 && totalRatings > 0 && (
-            <div style={{ marginBottom: 16, padding: "18px", backgroundColor: COLORS.bgGray, borderRadius: 16 }}>
-              <SectionHeader icon={<TrendingUp size={16} color={COLORS.primary} />} title="유저 평점" sub={`${totalRatings.toLocaleString()}명 참여`} color={COLORS.primary} />
-              <div style={{ display: "flex", borderRadius: 10, overflow: "hidden", height: 32, marginBottom: 12 }}>
+            <div style={{ marginBottom: 16, padding: "18px", backgroundColor: "#F8F9FA", borderRadius: 14, border: "1px solid #ECEEF0" }}>
+              <SectionHeader icon={<TrendingUp size={15} color={COLORS.primary} />} title="유저 평점" sub={`${totalRatings.toLocaleString()}명 참여`} color={COLORS.primary} />
+              <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", height: 28, marginBottom: 12 }}>
                 {ratings.sort((a, b) => {
                   const order = { exceptional: 0, recommended: 1, meh: 2, skip: 3 };
                   return (order[a.title] ?? 4) - (order[b.title] ?? 4);
                 }).map((r, i) => {
-                  const info = ratingMap[r.title] || { label: r.title, emoji: "⭐", color: "#999" };
+                  const info = ratingMap[r.title] || { label: r.title, color: "#999", Icon: Minus };
                   return r.percent > 0 ? (
                     <div key={i} style={{
                       width: `${r.percent}%`, backgroundColor: info.color, display: "flex",
                       alignItems: "center", justifyContent: "center", minWidth: r.percent > 8 ? 40 : 0,
                     }}>
-                      {r.percent > 12 && <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{Math.round(r.percent)}%</span>}
+                      {r.percent > 12 && <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>{Math.round(r.percent)}%</span>}
                     </div>
                   ) : null;
                 })}
               </div>
-              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                 {ratings.sort((a, b) => {
                   const order = { exceptional: 0, recommended: 1, meh: 2, skip: 3 };
                   return (order[a.title] ?? 4) - (order[b.title] ?? 4);
                 }).map((r, i) => {
-                  const info = ratingMap[r.title] || { label: r.title, emoji: "⭐", color: "#999" };
+                  const info = ratingMap[r.title] || { label: r.title, color: "#999", Icon: Minus };
+                  const IconComp = info.Icon;
                   return (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <div style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: info.color }} />
-                      <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{info.emoji} {info.label}</span>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: info.color }} />
+                      <IconComp size={12} color={info.color} />
+                      <span style={{ fontSize: 12, color: COLORS.textSecondary }}>{info.label}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: COLORS.textPrimary }}>{r.count.toLocaleString()}</span>
                     </div>
                   );
@@ -758,70 +755,67 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             </div>
           )}
 
-          {/* ====== 플레이타임 + 태그 ====== */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-            {/* 플레이타임 카드 */}
-            {playtimeComment && (
+          {/* ====== 플레이타임 ====== */}
+          {playtimeComment && (
+            <div style={{
+              marginBottom: 16, padding: "14px 16px", borderRadius: 12,
+              backgroundColor: "#F8F9FA", border: "1px solid #ECEEF0",
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
               <div style={{
-                flex: "1 1 280px", padding: "14px 16px", borderRadius: 14,
-                background: "linear-gradient(135deg, #F0F8FF, #F8F0FF)",
-                border: "1px solid #E8E0F8",
-                display: "flex", alignItems: "center", gap: 12,
+                width: 40, height: 40, borderRadius: 10,
+                backgroundColor: "#6C5CE710",
+                display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: "#6C5CE712", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Clock size={20} color="#6C5CE7" />
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#6C5CE7" }}>평균 {playtime}시간</div>
-                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 2 }}>{playtimeComment}</div>
-                </div>
+                <Clock size={18} color="#6C5CE7" />
               </div>
-            )}
-
-            {/* Steam 가격은 상단 가격 카드로 이동 */}
-          </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.textPrimary }}>평균 {playtime}시간</div>
+                <div style={{ fontSize: 12, color: COLORS.textMuted, marginTop: 2 }}>{playtimeComment}</div>
+              </div>
+            </div>
+          )}
 
           {/* ====== 태그 ====== */}
           {koTags.length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
               {koTags.slice(0, 8).map((tag, i) => (
                 <span key={i} style={{
-                  fontSize: 12, padding: "5px 12px", borderRadius: 20,
-                  backgroundColor: i === 0 ? `${COLORS.primary}12` : COLORS.bgGray,
-                  color: i === 0 ? COLORS.primary : COLORS.textSecondary,
-                  fontWeight: i === 0 ? 700 : 500,
-                  border: i === 0 ? `1px solid ${COLORS.primary}30` : "none",
+                  fontSize: 12, padding: "5px 11px", borderRadius: 6,
+                  backgroundColor: "#F3F4F6",
+                  color: COLORS.textSecondary,
+                  fontWeight: 500,
+                  border: "1px solid #ECEEF0",
                 }}>{tag}</span>
               ))}
               {esrbRating && (
-                <span style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, backgroundColor: "#FFF0F0", color: "#CC3333", fontWeight: 600 }}>
+                <span style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, backgroundColor: "#FEF2F2", color: "#B91C1C", fontWeight: 600, border: "1px solid #FECACA" }}>
                   {esrbRating.name}
                 </span>
               )}
             </div>
           )}
 
-          {/* 업적 섹션 제거됨 */}
-
           {/* ====== 구매처 ====== */}
           {stores.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <SectionHeader icon={<ShoppingCart size={16} color={COLORS.primary} />} title="구매 가능한 스토어" color={COLORS.primary} />
+              <SectionHeader icon={<ShoppingCart size={15} color={COLORS.primary} />} title="구매 가능한 스토어" color={COLORS.primary} />
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {stores.map((s, i) => {
-                  const info = STORE_INFO[s.store?.id] || { name: s.store?.name, color: "#666", icon: "🎮" };
+                  const info = STORE_ICONS[s.store?.id] || { name: s.store?.name, color: "#666" };
                   const url = s.url || (s.store?.slug === "steam" ? "https://store.steampowered.com" : `https://${s.store?.domain}`);
                   return (
                     <a key={i} href={url} target="_blank" rel="noreferrer"
                       style={{
-                        display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12,
-                        backgroundColor: COLORS.bgGray, textDecoration: "none", color: COLORS.textPrimary,
-                        fontSize: 13, fontWeight: 600, transition: "all 0.15s", border: `1px solid ${COLORS.borderLight}`,
+                        display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 8,
+                        backgroundColor: "#F8F9FA", textDecoration: "none", color: COLORS.textPrimary,
+                        fontSize: 13, fontWeight: 600, transition: "all 0.15s", border: "1px solid #ECEEF0",
                       }}
-                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = info.color; e.currentTarget.style.color = "#fff"; }}
-                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = COLORS.bgGray; e.currentTarget.style.color = COLORS.textPrimary; }}>
-                      <span style={{ fontSize: 14 }}>{info.icon}</span>
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = info.color; e.currentTarget.style.color = "#fff"; e.currentTarget.style.borderColor = info.color; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = "#F8F9FA"; e.currentTarget.style.color = COLORS.textPrimary; e.currentTarget.style.borderColor = "#ECEEF0"; }}>
+                      <Gamepad2 size={14} />
                       {info.name}
+                      <ExternalLink size={11} style={{ opacity: 0.4 }} />
                     </a>
                   );
                 })}
@@ -834,17 +828,18 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             <div style={{ marginBottom: 16 }}>
               <button onClick={() => setExpandReqs(!expandReqs)} style={{
                 width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "14px 16px", borderRadius: 14, backgroundColor: COLORS.bgGray,
-                border: `1px solid ${COLORS.borderLight}`, cursor: "pointer", color: COLORS.textPrimary,
+                padding: "13px 16px", borderRadius: expandReqs ? "12px 12px 0 0" : 12, backgroundColor: "#F8F9FA",
+                border: "1px solid #ECEEF0", cursor: "pointer", color: COLORS.textPrimary,
+                borderBottom: expandReqs ? "none" : undefined,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <Monitor size={16} color={COLORS.primary} />
+                  <Monitor size={15} color={COLORS.primary} />
                   <span style={{ fontSize: 14, fontWeight: 700 }}>PC 시스템 요구사양</span>
                 </div>
                 {expandReqs ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
               {expandReqs && (
-                <div style={{ padding: "14px 16px", backgroundColor: COLORS.bgGray, borderRadius: "0 0 14px 14px", marginTop: -4 }}>
+                <div style={{ padding: "14px 16px", backgroundColor: "#F8F9FA", borderRadius: "0 0 12px 12px", border: "1px solid #ECEEF0", borderTop: "none" }}>
                   {pcRequirements.minimum && (
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primary, marginBottom: 4 }}>최소 사양</div>
@@ -868,11 +863,16 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* ====== 추천 이유 (하드코딩 게임) ====== */}
           {game.matchReasons && game.matchReasons.length > 0 && (
-            <div style={{ marginBottom: 16, padding: "18px", backgroundColor: "#F8FCFE", borderRadius: 16, border: `1px solid ${COLORS.primaryLight}` }}>
-              <SectionHeader icon={<Sparkles size={16} color={COLORS.primary} />} title="이 게임을 추천하는 이유" color={COLORS.primary} />
+            <div style={{ marginBottom: 16, padding: "18px", backgroundColor: "#F8F9FA", borderRadius: 14, border: "1px solid #ECEEF0" }}>
+              <SectionHeader icon={<Target size={15} color={COLORS.primary} />} title="이 게임을 추천하는 이유" color={COLORS.primary} />
               {game.matchReasons.map((reason, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: COLORS.primary, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{
+                    width: 22, height: 22, borderRadius: 6,
+                    backgroundColor: COLORS.primary + "15", color: COLORS.primary,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700, flexShrink: 0,
+                  }}>{i + 1}</span>
                   <span style={{ fontSize: 14, color: COLORS.textPrimary, lineHeight: 1.4 }}>{reason}</span>
                 </div>
               ))}
@@ -881,11 +881,11 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
 
           {/* 주의사항 */}
           {game.warnings && game.warnings.length > 0 && (
-            <div style={{ marginBottom: 16, padding: "14px 16px", backgroundColor: "#FFF8F0", borderRadius: 14, border: "1px solid #FFE8D0" }}>
+            <div style={{ marginBottom: 16, padding: "14px 16px", backgroundColor: "#FFFBF5", borderRadius: 12, border: "1px solid #F0E4D0" }}>
               {game.warnings.map((w, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginTop: i > 0 ? 6 : 0 }}>
-                  <span style={{ fontSize: 14 }}>⚠️</span>
-                  <span style={{ fontSize: 13, color: "#B36B00", fontWeight: 500 }}>{w}</span>
+                  <AlertTriangle size={14} color="#B38600" />
+                  <span style={{ fontSize: 13, color: "#7A5C00", fontWeight: 500 }}>{w}</span>
                 </div>
               ))}
             </div>
@@ -894,15 +894,20 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
           {/* ====== 같은 시리즈 ====== */}
           {series.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <SectionHeader icon={<Bookmark size={16} color={COLORS.primary} />} title="같은 시리즈" color={COLORS.primary} />
+              <SectionHeader icon={<Bookmark size={15} color={COLORS.primary} />} title="같은 시리즈" color={COLORS.primary} />
               <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollbarWidth: "thin" }}>
                 {series.map(s => (
                   <div key={s.id} style={{ flex: "0 0 auto", width: 140, textAlign: "center" }}>
                     <img src={s.background_image} alt={s.name}
-                      style={{ width: 140, height: 78, objectFit: "cover", borderRadius: 12, marginBottom: 6 }}
+                      style={{ width: 140, height: 78, objectFit: "cover", borderRadius: 10, marginBottom: 6 }}
                       onError={handleImgError} />
                     <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
-                    {s.metacritic && <div style={{ fontSize: 10, color: getRatingColor(s.metacritic), fontWeight: 700, marginTop: 2 }}>⭐ {s.metacritic}</div>}
+                    {s.metacritic && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 3 }}>
+                        <Star size={10} color={getRatingColor(s.metacritic)} fill={getRatingColor(s.metacritic)} />
+                        <span style={{ fontSize: 11, color: getRatingColor(s.metacritic), fontWeight: 700 }}>{s.metacritic}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -914,18 +919,18 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
               {website && (
                 <a href={website} target="_blank" rel="noreferrer" style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12,
-                  backgroundColor: COLORS.bgGray, textDecoration: "none", color: COLORS.textSecondary,
-                  fontSize: 13, fontWeight: 600, border: `1px solid ${COLORS.borderLight}`,
+                  display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 8,
+                  backgroundColor: "#F8F9FA", textDecoration: "none", color: COLORS.textSecondary,
+                  fontSize: 13, fontWeight: 600, border: "1px solid #ECEEF0",
                 }}>
                   <Globe size={14} /> 공식 웹사이트
                 </a>
               )}
               {redditUrl && (
                 <a href={redditUrl} target="_blank" rel="noreferrer" style={{
-                  display: "flex", alignItems: "center", gap: 6, padding: "10px 16px", borderRadius: 12,
-                  backgroundColor: "#FFF4F0", textDecoration: "none", color: "#FF4500",
-                  fontSize: 13, fontWeight: 600, border: "1px solid #FFE0D0",
+                  display: "flex", alignItems: "center", gap: 6, padding: "9px 14px", borderRadius: 8,
+                  backgroundColor: "#FEF5F2", textDecoration: "none", color: "#CC4500",
+                  fontSize: 13, fontWeight: 600, border: "1px solid #F5DDD5",
                 }}>
                   Reddit 커뮤니티 {redditCount > 0 ? `(${redditCount.toLocaleString()}명)` : ""}
                 </a>

@@ -29,6 +29,8 @@ export const KOREAN_TITLES = {
   "final-fantasy-vii-remake": "파이널 판타지 VII 리메이크",
   "final-fantasy-xvi": "파이널 판타지 XVI",
   "final-fantasy-xv": "파이널 판타지 XV",
+  "crimson-desert": "붉은사막",
+  "stalker-2-heart-of-chornobyl": "스토커 2",
   "resident-evil-village": "바이오하자드 빌리지",
   "resident-evil-4-2023": "바이오하자드 RE:4",
   "resident-evil-2": "바이오하자드 RE:2",
@@ -572,6 +574,64 @@ export const TAG_KO = {
 };
 
 // 한국어 제목 찾기 (slug 기반 → name 기반 순서)
+// ============================================================
+// 역방향 매핑: 한국어 제목 → 영문 이름 (검색용)
+// ============================================================
+const _reverseMap = new Map();
+let _reverseBuilt = false;
+
+const buildReverseMap = () => {
+  if (_reverseBuilt) return;
+  for (const [slug, koTitle] of Object.entries(KOREAN_TITLES)) {
+    // 한국어 제목 → slug
+    const normalized = koTitle.replace(/[:：\s]+/g, " ").trim().toLowerCase();
+    _reverseMap.set(normalized, slug);
+    // 콜론/특수문자 제거 버전도 등록
+    const simple = koTitle.replace(/[:：\-\s()（）]+/g, "").toLowerCase();
+    _reverseMap.set(simple, slug);
+    // 원본 그대로도 등록
+    _reverseMap.set(koTitle.toLowerCase(), slug);
+  }
+  _reverseBuilt = true;
+};
+
+// 한국어 텍스트인지 판별
+export const isKorean = (text) => /[\uAC00-\uD7AF\u3130-\u318F]/.test(text);
+
+// 한국어 검색어 → 영문 이름으로 변환 (부분 일치 지원)
+export const searchKoreanToEnglish = (koreanQuery) => {
+  buildReverseMap();
+  const q = koreanQuery.trim().toLowerCase();
+  const qSimple = q.replace(/[:：\-\s()（）]+/g, "");
+
+  const matches = [];
+  for (const [slug, koTitle] of Object.entries(KOREAN_TITLES)) {
+    const koLower = koTitle.toLowerCase();
+    const koSimple = koTitle.replace(/[:：\-\s()（）]+/g, "").toLowerCase();
+    // 정확히 일치
+    if (koLower === q || koSimple === qSimple) {
+      matches.unshift({ slug, koTitle, score: 100 });
+    }
+    // 한국어 제목이 검색어를 포함
+    else if (koLower.includes(q) || koSimple.includes(qSimple)) {
+      matches.push({ slug, koTitle, score: 80 });
+    }
+    // 검색어가 한국어 제목을 포함 (역방향)
+    else if (q.includes(koLower) || qSimple.includes(koSimple)) {
+      matches.push({ slug, koTitle, score: 60 });
+    }
+  }
+
+  // 점수 높은 순 정렬
+  matches.sort((a, b) => b.score - a.score);
+  return matches.slice(0, 10);
+};
+
+// slug → 영문 이름 복원 (slug-format → Title Case)
+export const slugToEnglishName = (slug) => {
+  return slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+};
+
 export const getKoreanTitle = (game) => {
   if (!game) return null;
 

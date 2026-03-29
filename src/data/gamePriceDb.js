@@ -81,6 +81,7 @@ const PRICE_DB = {
   "resident-evil-2": { full: 43000, low: 10750, curr: 43000, disc: 0 },
   "monster-hunter-wilds": { full: 66000, low: 66000, curr: 66000, disc: 0 },
   "street-fighter-6": { full: 66000, low: 33000, curr: 66000, disc: 0 },
+  "resident-evil-village": { full: 43000, low: 12900, curr: 43000, disc: 0 },
 
   // === 기타 대작 ===
   "persona-5-royal": { full: 66000, low: 26400, curr: 66000, disc: 0 },

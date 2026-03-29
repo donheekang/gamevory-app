@@ -5,6 +5,7 @@
 
 import { getKoreanTitle, translateGenres, translateTags } from "../data/koreanMappings";
 import { getKoreanSupport } from "../data/koreanSupportDb";
+import { getGamePrice, formatKrw } from "../data/gamePriceDb";
 
 // Vercel 환경: /api/rawg 프록시 사용 (API 키 서버에만 보관)
 // 로컬 file:// 환경: 직접 호출 폴백
@@ -128,7 +129,11 @@ export const getUpcomingGames = async (pageSize = 20) => {
 export const getRecentGames = async (pageSize = 20) => {
   const today = new Date().toISOString().slice(0, 10);
   const pastDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const params = { dates: `${pastDate},${today}`, ordering: "-added", page_size: pageSize.toString() };
+  const params = {
+    dates: `${pastDate},${today}`,
+    ordering: "-rating,-ratings_count",
+    page_size: pageSize.toString(),
+  };
   if (IS_VERCEL) return fetchRawgProxy("/games", params);
   return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
@@ -192,6 +197,61 @@ export const fetchSteamKoreanData = async (steamAppId) => {
   }
 };
 
+// ============================================================
+// Steam 검색 API (한국어 검색 지원)
+// ============================================================
+const steamSearchCache = new Map();
+
+export const searchSteamKorean = async (query) => {
+  if (!query || query.length < 2) return [];
+  const cacheKey = `steam-search:${query}`;
+  if (steamSearchCache.has(cacheKey)) return steamSearchCache.get(cacheKey);
+
+  try {
+    const res = await fetch(`/api/steam-search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data?.items || [];
+    steamSearchCache.set(cacheKey, items);
+    return items;
+  } catch {
+    return [];
+  }
+};
+
+// Steam 검색 결과 → GameVory 포맷 변환
+export const steamSearchToGameVory = (steamItem) => {
+  if (!steamItem) return null;
+  const isFree = steamItem.price?.final === 0;
+  const discPct = steamItem.price?.discountPercent || 0;
+  const priceFormatted = isFree ? "무료" : steamItem.price?.formatted || "가격 확인 필요";
+
+  return {
+    id: steamItem.appId,
+    title: steamItem.name,
+    titleKo: steamItem.name, // Steam 한국어 API에서 이미 한국어 이름 반환
+    image: `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${steamItem.appId}/header.jpg`,
+    tags: [],
+    score: steamItem.metascore || null,
+    playtime: "정보 없음",
+    genre: "Steam에서 확인",
+    price: priceFormatted,
+    discountPct: discPct,
+    originalPrice: discPct > 0 && steamItem.price?.initial ? `₩${Math.round(steamItem.price.initial / 100).toLocaleString()}` : "",
+    free: isFree,
+    kr: { ui: false, sub: false, audio: false }, // Steam 상세에서 추후 로드
+    feat: { coop: false, localCoop: false, ctrl: "none", sp: true },
+    matchReasons: [],
+    warnings: [],
+    dev: [],
+    date: "",
+    screenshots: [],
+    steamAppId: String(steamItem.appId),
+    isRawg: false,
+    isSteamSearch: true,
+  };
+};
+
 // RAWG 게임에서 Steam App ID 추출
 export const extractSteamId = (rawgGame) => {
   if (!rawgGame?.stores) return null;
@@ -227,6 +287,26 @@ export const rawgToGameVory = (rawgGame) => {
   });
   const krSupport = krFromDb || { ui: false, sub: false, audio: false };
 
+  // 가격 DB 조회 (1회만)
+  let gamePrice = null;
+  let gamePriceStr = null;
+  let gameDisc = 0;
+  let gameOriginal = "";
+  let gameFree = rawgGame.tags?.some(t => t.slug === "free-to-play") || false;
+  try {
+    gamePrice = getGamePrice(rawgGame.slug, steamAppId);
+    if (gamePrice) {
+      gameFree = !!gamePrice.free;
+      gameDisc = gamePrice.disc || 0;
+      gamePriceStr = gameFree ? "무료" : formatKrw(gamePrice.curr);
+      if (gameDisc > 0) gameOriginal = formatKrw(gamePrice.full);
+    } else if (gameFree) {
+      gamePriceStr = "무료";
+    }
+  } catch (e) {
+    // 가격 DB 에러 무시
+  }
+
   return {
     id: rawgGame.id,
     title: rawgGame.name,
@@ -238,10 +318,10 @@ export const rawgToGameVory = (rawgGame) => {
     playtime: rawgGame.playtime ? `${rawgGame.playtime}시간+` : "정보 없음",
     genre: genresKo || "장르 미분류",
     genreOriginal: genres,
-    price: "Steam에서 확인",
-    discountPct: 0,
-    originalPrice: "",
-    free: rawgGame.tags?.some(t => t.slug === "free-to-play") || false,
+    price: gamePriceStr,
+    discountPct: gameDisc,
+    originalPrice: gameOriginal,
+    free: gameFree,
     kr: krSupport,
     feat: {
       coop: rawgGame.tags?.some(t => ["co-op", "cooperative", "online-co-op"].includes(t.slug)) || false,
