@@ -288,12 +288,14 @@ export const GameDetail = ({ game, onClose, isSaved, onToggleSave }) => {
             const steamId = hookSteamId || game.steamAppId || (!game.isRawg ? game.id : null);
             const pSlug = details?.slug || game?.slug;
 
-            // Steam API 가격 (Vercel 프록시 경유) → 정적 DB 폴백
-            const steamPriceDetail = steamKo?.priceDetail;
+            // 정적 DB 우선 (즉시 표시) → Steam API 폴백 (DB에 없는 게임만)
             const staticPrice = getGamePrice(pSlug, steamId);
-            const priceData = steamPriceDetail
-              ? { full: steamPriceDetail.full, low: Math.round(steamPriceDetail.full * 0.5), curr: steamPriceDetail.curr, disc: steamPriceDetail.disc, ...(staticPrice?.low != null ? { low: staticPrice.low } : {}) }
-              : staticPrice;
+            const steamPriceDetail = steamKo?.priceDetail;
+            const priceData = staticPrice
+              ? staticPrice  // 정적 DB에 있으면 즉시 사용 (API 대기 불필요)
+              : steamPriceDetail
+                ? { full: steamPriceDetail.full, low: Math.round(steamPriceDetail.full * 0.7), curr: steamPriceDetail.curr, disc: steamPriceDetail.disc }
+                : null;  // 둘 다 없으면 Steam 링크 카드 표시
 
             const isFree = priceData?.free || steamKo?.isFree || game.free || priceDisplay === "무료";
             const steamUrl = steamId ? `https://store.steampowered.com/app/${steamId}` : null;

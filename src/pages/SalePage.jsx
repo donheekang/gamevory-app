@@ -20,23 +20,14 @@ export const SalePage = () => {
     const fetchF2P = async () => {
       setF2pLoading(true);
       try {
-        const data = await searchGames("", { pageSize: 12, ordering: "-added" });
-        // tags에서 free-to-play 필터
-        const params = new URLSearchParams({
-          key: "867484eef09646f5a9e951a0fc27b0fe",
-          tags: "free-to-play",
-          ordering: "-added",
-          page_size: "12",
-        });
-        const res = await fetch(`https://api.rawg.io/api/games?${params}`);
-        if (res.ok) {
-          const result = await res.json();
-          if (!cancelled && result?.results) {
-            setF2pGames(result.results.map(g => {
-              const converted = rawgToGameVory(g);
-              return { ...converted, free: true, price: "무료" };
-            }));
-          }
+        // RAWG 인기 게임에서 F2P 필터링 (프록시 자동 분기)
+        const result = await searchGames("free to play", { pageSize: 20, ordering: "-added" });
+        const f2pFiltered = (result?.results || []).filter(g => g.tags?.some(t => t.slug === "free-to-play")).slice(0, 12);
+        if (!cancelled && f2pFiltered.length > 0) {
+          setF2pGames(f2pFiltered.map(g => {
+            const converted = rawgToGameVory(g);
+            return { ...converted, free: true, price: "무료" };
+          }));
         }
       } catch (err) {
         console.error("F2P fetch failed:", err);

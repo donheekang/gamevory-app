@@ -6,12 +6,37 @@
 import { getKoreanTitle, translateGenres, translateTags } from "../data/koreanMappings";
 import { getKoreanSupport } from "../data/koreanSupportDb";
 
-const API_KEY = "867484eef09646f5a9e951a0fc27b0fe";
+// Vercel 환경: /api/rawg 프록시 사용 (API 키 서버에만 보관)
+// 로컬 file:// 환경: 직접 호출 폴백
+const IS_VERCEL = typeof window !== "undefined" && window.location.protocol === "https:";
+const API_KEY = "867484eef09646f5a9e951a0fc27b0fe"; // 로컬 폴백용 (Vercel에서는 미사용)
 const BASE_URL = "https://api.rawg.io/api";
 
 // 캐시: 동일 요청 반복 방지
 const cache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10분 (페이지 전환 시 재로드 방지)
+const CACHE_TTL = 10 * 60 * 1000;
+
+// Vercel 프록시를 통한 RAWG API 호출
+const fetchRawgProxy = async (path, params = {}) => {
+  const cacheKey = `proxy:${path}:${JSON.stringify(params)}`;
+  const now = Date.now();
+  if (cache.has(cacheKey)) {
+    const { data, timestamp } = cache.get(cacheKey);
+    if (now - timestamp < CACHE_TTL) return data;
+  }
+
+  try {
+    const queryParams = new URLSearchParams({ path, ...params });
+    const res = await fetch(`/api/rawg?${queryParams}`);
+    if (!res.ok) throw new Error(`RAWG Proxy Error: ${res.status}`);
+    const data = await res.json();
+    cache.set(cacheKey, { data, timestamp: now });
+    return data;
+  } catch (err) {
+    console.error("RAWG proxy failed:", err);
+    return null;
+  }
+};
 
 const fetchWithCache = async (url) => {
   const now = Date.now();
@@ -37,52 +62,40 @@ const fetchWithCache = async (url) => {
 // ============================================================
 export const searchGames = async (query, options = {}) => {
   const { page = 1, pageSize = 20, ordering, genres, platforms } = options;
-  const params = new URLSearchParams({
-    key: API_KEY,
-    search: query,
-    page: page.toString(),
-    page_size: pageSize.toString(),
-    search_precise: "true",
-  });
-  if (ordering) params.set("ordering", ordering);
-  if (genres) params.set("genres", genres);
-  if (platforms) params.set("platforms", platforms);
+  const params = { search: query, page: page.toString(), page_size: pageSize.toString(), search_precise: "true" };
+  if (ordering) params.ordering = ordering;
+  if (genres) params.genres = genres;
+  if (platforms) params.platforms = platforms;
 
-  return fetchWithCache(`${BASE_URL}/games?${params}`);
+  if (IS_VERCEL) return fetchRawgProxy("/games", params);
+  return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
 
 // ============================================================
 // 게임 상세 정보
 // ============================================================
 export const getGameDetails = async (gameId) => {
+  if (IS_VERCEL) return fetchRawgProxy(`/games/${gameId}`);
   return fetchWithCache(`${BASE_URL}/games/${gameId}?key=${API_KEY}`);
 };
 
-// ============================================================
-// 게임 스크린샷
-// ============================================================
 export const getGameScreenshots = async (gameId, pageSize = 10) => {
+  if (IS_VERCEL) return fetchRawgProxy(`/games/${gameId}/screenshots`, { page_size: pageSize.toString() });
   return fetchWithCache(`${BASE_URL}/games/${gameId}/screenshots?key=${API_KEY}&page_size=${pageSize}`);
 };
 
-// ============================================================
-// 게임 트레일러 (영상)
-// ============================================================
 export const getGameTrailers = async (gameId) => {
+  if (IS_VERCEL) return fetchRawgProxy(`/games/${gameId}/movies`);
   return fetchWithCache(`${BASE_URL}/games/${gameId}/movies?key=${API_KEY}`);
 };
 
-// ============================================================
-// 게임 시리즈 (같은 프랜차이즈)
-// ============================================================
 export const getGameSeries = async (gameId) => {
+  if (IS_VERCEL) return fetchRawgProxy(`/games/${gameId}/game-series`);
   return fetchWithCache(`${BASE_URL}/games/${gameId}/game-series?key=${API_KEY}`);
 };
 
-// ============================================================
-// 게임 업적
-// ============================================================
 export const getGameAchievements = async (gameId) => {
+  if (IS_VERCEL) return fetchRawgProxy(`/games/${gameId}/achievements`);
   return fetchWithCache(`${BASE_URL}/games/${gameId}/achievements?key=${API_KEY}`);
 };
 
@@ -91,69 +104,42 @@ export const getGameAchievements = async (gameId) => {
 // ============================================================
 export const getTrendingGames = async (options = {}) => {
   const { page = 1, pageSize = 20, ordering = "-added", dates } = options;
-  const params = new URLSearchParams({
-    key: API_KEY,
-    page: page.toString(),
-    page_size: pageSize.toString(),
-    ordering,
-  });
-  if (dates) params.set("dates", dates);
+  const params = { page: page.toString(), page_size: pageSize.toString(), ordering };
+  if (dates) params.dates = dates;
 
-  return fetchWithCache(`${BASE_URL}/games?${params}`);
+  if (IS_VERCEL) return fetchRawgProxy("/games", params);
+  return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
 
-// ============================================================
-// 올해 최고 평점 게임
-// ============================================================
 export const getTopRatedGames = async (year = 2025, pageSize = 20) => {
-  const params = new URLSearchParams({
-    key: API_KEY,
-    dates: `${year}-01-01,${year}-12-31`,
-    ordering: "-metacritic",
-    page_size: pageSize.toString(),
-    metacritic: "70,100",
-  });
-  return fetchWithCache(`${BASE_URL}/games?${params}`);
+  const params = { dates: `${year}-01-01,${year}-12-31`, ordering: "-metacritic", page_size: pageSize.toString(), metacritic: "70,100" };
+  if (IS_VERCEL) return fetchRawgProxy("/games", params);
+  return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
 
-// ============================================================
-// 최근 출시 / 곧 출시 게임
-// ============================================================
 export const getUpcomingGames = async (pageSize = 20) => {
   const today = new Date().toISOString().slice(0, 10);
   const futureDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const params = new URLSearchParams({
-    key: API_KEY,
-    dates: `${today},${futureDate}`,
-    ordering: "-added",
-    page_size: pageSize.toString(),
-  });
-  return fetchWithCache(`${BASE_URL}/games?${params}`);
+  const params = { dates: `${today},${futureDate}`, ordering: "-added", page_size: pageSize.toString() };
+  if (IS_VERCEL) return fetchRawgProxy("/games", params);
+  return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
 
 export const getRecentGames = async (pageSize = 20) => {
   const today = new Date().toISOString().slice(0, 10);
   const pastDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const params = new URLSearchParams({
-    key: API_KEY,
-    dates: `${pastDate},${today}`,
-    ordering: "-added",
-    page_size: pageSize.toString(),
-  });
-  return fetchWithCache(`${BASE_URL}/games?${params}`);
+  const params = { dates: `${pastDate},${today}`, ordering: "-added", page_size: pageSize.toString() };
+  if (IS_VERCEL) return fetchRawgProxy("/games", params);
+  return fetchWithCache(`${BASE_URL}/games?${new URLSearchParams({ key: API_KEY, ...params })}`);
 };
 
-// ============================================================
-// 장르 목록
-// ============================================================
 export const getGenres = async () => {
+  if (IS_VERCEL) return fetchRawgProxy("/genres");
   return fetchWithCache(`${BASE_URL}/genres?key=${API_KEY}`);
 };
 
-// ============================================================
-// 플랫폼 목록
-// ============================================================
 export const getPlatforms = async () => {
+  if (IS_VERCEL) return fetchRawgProxy("/platforms", { page_size: "50" });
   return fetchWithCache(`${BASE_URL}/platforms?key=${API_KEY}&page_size=50`);
 };
 
