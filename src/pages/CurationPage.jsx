@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ChevronRight, Sparkles } from "lucide-react";
 import { COLORS } from "../styles/theme";
 import { SITUATIONS, CURATED_THEMES, GAMES } from "../data/games";
@@ -12,10 +13,21 @@ const TABS = [
 ];
 
 export const CurationPage = ({ games }) => {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("situation");
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const { isSaved, toggleSave } = useSavedGames();
+
+  // URL 파라미터로 상황 자동 선택 (홈에서 클릭 시)
+  useEffect(() => {
+    const situationId = searchParams.get("situation");
+    if (situationId) {
+      setActiveTab("situation");
+      const found = SITUATIONS.find(s => s.id === situationId);
+      if (found) setSelectedItem(found);
+    }
+  }, [searchParams]);
 
   const items = activeTab === "situation" ? SITUATIONS : CURATED_THEMES;
   const filteredGames = selectedItem
@@ -35,7 +47,7 @@ export const CurationPage = ({ games }) => {
             <span style={{ fontSize: 10, fontWeight: 700, color: "#fff", backgroundColor: COLORS.primary, padding: "2px 8px", borderRadius: 6 }}>에디터 추천</span>
           </div>
           <p style={{ fontSize: 15, color: COLORS.textSecondary, margin: 0 }}>
-            GameVory 에디터가 직접 골라서 한국어로 리뷰한 {games.length}개 게임
+            GameVory 에디터가 직접 골라서 한국어로 리뷰한 게임 모음
           </p>
         </div>
 

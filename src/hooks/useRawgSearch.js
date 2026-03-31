@@ -3,7 +3,7 @@ import { searchGames, rawgToGameVory, searchSteamKorean, steamSearchToGameVory }
 import { getKoreanTitle, translateGenres, isKorean, searchKoreanToEnglish, slugToEnglishName } from "../data/koreanMappings";
 import { GAMES } from "../data/games";
 
-// 로컬 DB에서 한국어 검색 (정적 49개 게임)
+// 로컬 DB에서 한국어 검색
 const searchLocalGames = (query) => {
   const q = query.toLowerCase().trim();
   return GAMES.filter(game => {
